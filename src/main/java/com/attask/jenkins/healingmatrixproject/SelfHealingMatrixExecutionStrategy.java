@@ -284,7 +284,6 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 
 	/**
 	 * Schedules the given configuration.
-	 * Providing the build with the "SELF_HEAL_RETRY_COUNT" parameter in case scripts might care how many times they've been retried.
 	 *
 	 * @param execution     Contains information about the general build, including the listener used to log queue blockage.
 	 * @param configuration The configuration to schedule.
