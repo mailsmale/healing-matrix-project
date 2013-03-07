@@ -1,5 +1,6 @@
 package com.attask.jenkins.healingmatrixproject;
 
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.console.ModelHyperlinkNote;
 import hudson.matrix.*;
@@ -92,6 +93,10 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 
 	@Override
 	public Result run(MatrixBuild.MatrixBuildExecution execution) throws InterruptedException, IOException {
+		if (!notifyStartBuild(execution.getAggregators(), execution.getListener())) {
+			return Result.FAILURE;
+		}
+
 		List<Pattern> patterns = createPatternsList();
 
 		Map<MatrixConfiguration, Integer> retries = new HashMap<MatrixConfiguration, Integer>();
@@ -192,9 +197,46 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 					logger.println(logMessage);
 				}
 			}
+			notifyEndRun(matrixRun, execution.getAggregators(), execution.getListener());
 			finalResult = finalResult.combine(runResult);
 		}
 		return finalResult;
+	}
+
+	/**
+	 * Logic is more-or-less copied from {@link DefaultMatrixExecutionStrategyImpl#notifyStartBuild(java.util.List)}
+	 *
+	 * Triggers the startBuild event on all aggregators.
+	 * This should be called before any run is started.
+	 *
+	 *
+	 * @param aggregators The aggregators to be notified.
+	 * @param listener Listener from parent build that can be logged to.
+	 * @return True if all aggregators return true. If any aggregator returns false, false is immediately returned and no new aggregators are called.
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	private boolean notifyStartBuild(List<MatrixAggregator> aggregators, BuildListener listener) throws IOException, InterruptedException {
+		for (MatrixAggregator aggregator : aggregators) {
+			if(!aggregator.startBuild()) {
+				listener.error("Aggregator terminated build: " + aggregator.toString());
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Logic is copied from {@link DefaultMatrixExecutionStrategyImpl#notifyEndBuild(hudson.matrix.MatrixRun, java.util.List)}
+	 */
+	private void notifyEndRun(MatrixRun run, List<MatrixAggregator> aggregators, BuildListener listener) throws InterruptedException, IOException {
+		if (run==null)    return; // can happen if the configuration run gets cancelled before it gets started.
+		for (MatrixAggregator aggregator : aggregators) {
+			if(!aggregator.endRun(run)) {
+				listener.error("Aggregator terminated build: " + aggregator.toString());
+				throw new AbortException();
+			}
+		}
 	}
 
 	/**
