@@ -317,7 +317,6 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 				PrintStream logger = listener.getLogger();
 				logger.print("Configuration " + ModelHyperlinkNote.encodeTo(configuration) + " is still in the queue: ");
 				queueItem.getCauseOfBlockage().print(listener); //this is still shown on the same line
-				logger.println();
 			}
 		}
 
