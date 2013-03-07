@@ -2,6 +2,7 @@ package com.attask.jenkins.healingmatrixproject;
 
 import hudson.AbortException;
 import hudson.Extension;
+import hudson.Util;
 import hudson.console.ModelHyperlinkNote;
 import hudson.matrix.*;
 import hudson.matrix.Messages;
@@ -326,6 +327,8 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	/**
 	 * Schedules the given configuration.
 	 *
+	 * Copied from the {@link DefaultMatrixExecutionStrategyImpl#scheduleConfigurationBuild(hudson.matrix.MatrixBuild.MatrixBuildExecution, hudson.matrix.MatrixConfiguration)}
+	 *
 	 * @param execution     Contains information about the general build, including the listener used to log queue blockage.
 	 * @param configuration The configuration to schedule.
 	 * @param upstreamCause The cause of the build. Will either be an {@link hudson.model.Cause.UpstreamCause} or {@link com.attask.jenkins.healingmatrixproject.SelfHealingCause}.
@@ -334,8 +337,9 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 		MatrixBuild build = (MatrixBuild) execution.getBuild();
 		execution.getListener().getLogger().println(Messages.MatrixBuild_Triggering(ModelHyperlinkNote.encodeTo(configuration)));
 
-		ParametersAction oldParametersAction = build.getAction(ParametersAction.class);
-		configuration.scheduleBuild(oldParametersAction, upstreamCause);
+		// filter the parent actions for those that can be passed to the individual jobs.
+		List<MatrixChildAction> childActions = Util.filter(build.getActions(), MatrixChildAction.class);
+		configuration.scheduleBuild(childActions, upstreamCause);
 	}
 
 	@Extension
