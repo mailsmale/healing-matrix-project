@@ -41,8 +41,6 @@ import java.util.regex.Pattern;
 public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy {
 	private static final Logger LOGGER = Logger.getLogger("healing-matrix-project");
 
-	private final transient Object projectLock = new Object();
-
 	private final String logPattern;
 	private final Result worseThanOrEqualTo;
 	private final Result betterThanOrEqualTo;
@@ -177,7 +175,8 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 
 						HealedAction action = parentBuild.getAction(HealedAction.class);
 						if(action == null) {
-							synchronized (projectLock) {
+							//noinspection SynchronizationOnLocalVariableOrMethodParameter
+							synchronized (parentBuild.getActions()) {
 								action = parentBuild.getAction(HealedAction.class);
 								if(action == null) {
 									action = new HealedAction(matrixRun.getCharset());
