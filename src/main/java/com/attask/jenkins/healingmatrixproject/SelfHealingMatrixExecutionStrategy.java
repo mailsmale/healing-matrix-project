@@ -41,6 +41,8 @@ import java.util.regex.Pattern;
 public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy {
 	private static final Logger LOGGER = Logger.getLogger("healing-matrix-project");
 
+	private final transient Object projectLock = new Object();
+
 	private final String logPattern;
 	private final Result worseThanOrEqualTo;
 	private final Result betterThanOrEqualTo;
@@ -160,7 +162,8 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 				continue;
 			}
 
-			MatrixRun matrixRun = configuration.getBuildByNumber(execution.getBuild().getNumber());
+			Run parentBuild = execution.getBuild();
+			MatrixRun matrixRun = configuration.getBuildByNumber(parentBuild.getNumber());
 			Result runResult = matrixRun.getResult();
 			if (runResult.isWorseOrEqualTo(getWorseThanOrEqualTo()) && runResult.isBetterOrEqualTo(getBetterThanOrEqualTo())) {
 				if (matchesPattern(matrixRun, patterns)) {
@@ -171,22 +174,28 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 						//rerun
 						String logMessage = String.format("%s was %s. Matched pattern to rerun. Rerunning (%d).", matrixRun, runResult, retriedCount);
 						listener.error(logMessage);
-						listener.error("-------------------");
-						listener.error("----- Old Log -----");
-						listener.error("-------------------");
-						for (String line : matrixRun.getLog(100)) {
-							listener.error(line);
+
+						HealedAction action = parentBuild.getAction(HealedAction.class);
+						if(action == null) {
+							synchronized (projectLock) {
+								action = parentBuild.getAction(HealedAction.class);
+								if(action == null) {
+									action = new HealedAction(matrixRun.getCharset());
+									parentBuild.addAction(action);
+								}
+							}
 						}
-						listener.error("-------------------");
-						listener.error("-------------------");
+						action.addAutoHealedJob(matrixRun);
+
 						MatrixConfiguration parent = matrixRun.getParent();
 						if(parent != null) {
 							//I'm paranoid about NPEs
 							parent.removeRun(matrixRun);
+							matrixRun.delete();
 						} else {
 							LOGGER.severe("couldn't remove old run, parent was null. This is a Jenkins core bug.");
 						}
-						scheduleConfigurationBuild(execution, configuration, new SelfHealingCause(execution.getBuild(), retriedCount));
+						scheduleConfigurationBuild(execution, configuration, new SelfHealingCause(parentBuild, retriedCount));
 						configurations.add(configuration);
 						continue;
 					} else {

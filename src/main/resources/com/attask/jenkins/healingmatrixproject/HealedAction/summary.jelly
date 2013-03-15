@@ -1,0 +1,13 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+	<h3 id="oldLogs">Old Logs</h3>
+	<j:forEach var="jobName" items="${it.oldLogFiles.keySet()}">
+		<h4>${jobName}</h4>
+		<j:set var="index" value="${0}"/>
+		<ol>
+			<j:forEach var="logName" items="${it.oldLogFiles.get(jobName)}">
+				<li><a href="./autoHealed/log?name=${it.urlEncode(jobName)}&amp;index=${index}">${logName.name}</a></li>
+				<j:set var="index" value="${index + 0}"/>
+			</j:forEach>
+		</ol>
+	</j:forEach>
+</j:jelly>

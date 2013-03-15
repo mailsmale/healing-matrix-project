@@ -1,0 +1,7 @@
+<j:jelly xmlns:j="jelly:core">
+	<div class="task">
+		<img width="24" height="24" src="${rootURL}/plugin/healing-matrix-project/cross.png"/>
+		&amp;nbsp;
+		<span>Auto-Healed</span>
+	</div>
+</j:jelly>
