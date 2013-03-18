@@ -3,11 +3,13 @@
 	<j:forEach var="jobName" items="${it.oldLogFiles.keySet()}">
 		<h4>${jobName}</h4>
 		<j:set var="index" value="${0}"/>
-		<ol>
+		<ul>
 			<j:forEach var="logName" items="${it.oldLogFiles.get(jobName)}">
-				<li><a href="./autoHealed/log?name=${it.urlEncode(jobName)}&amp;index=${index}">${logName.name}</a></li>
-				<j:set var="index" value="${index + 0}"/>
+				<li>
+					<a href="./autoHealed/log?name=${it.urlEncode(jobName)}&amp;index=${index}">Failed Attempt ${index + 1}</a>
+				</li>
+				<j:set var="index" value="${index + 1}"/>
 			</j:forEach>
-		</ol>
+		</ul>
 	</j:forEach>
 </j:jelly>

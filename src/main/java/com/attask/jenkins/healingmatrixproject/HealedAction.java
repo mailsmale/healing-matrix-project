@@ -76,7 +76,7 @@ public class HealedAction implements Action {
 			logFileList = new CopyOnWriteArrayList<File>();
 			oldLogFiles.put(runName, logFileList);
 		}
-		logFileList.add(fileToSave);
+		logFileList.add(newFile);
 	}
 
 	public void doLog(StaplerRequest request, StaplerResponse response,
