@@ -56,27 +56,28 @@ public class HealedAction implements Action {
 			return;
 		}
 
-		File fileToSave = run.getLogFile();
+		File oldLogToCopy = run.getLogFile();
+		if(oldLogToCopy.exists()) {
+			String runName = run.toString();
 
-		String runName = run.toString();
+			String newFileName = runName.replaceAll("[^A-Za-z0-9_-]", "_");
+			File newFile = new File(oldLogDir, newFileName);
 
-		String newFileName = runName.replaceAll("[^A-Za-z0-9_-]", "_");
-		File newFile = new File(oldLogDir, newFileName);
+			//Lazy way to make sure we don't have duplicates.
+			int uniquifier = 0;
+			while(newFile.exists()) {
+				newFile = new File(oldLogDir, newFileName + (++uniquifier));
+			}
 
-		//Lazy way to make sure we don't have duplicates.
-		int uniquifier = 0;
-		while(newFile.exists()) {
-			newFile = new File(oldLogDir, newFileName + (++uniquifier));
+			FileUtils.copyFile(oldLogToCopy, newFile);
+
+			List<File> logFileList = oldLogFiles.get(runName);
+			if(logFileList == null) {
+				logFileList = new CopyOnWriteArrayList<File>();
+				oldLogFiles.put(runName, logFileList);
+			}
+			logFileList.add(newFile);
 		}
-
-		FileUtils.copyFile(fileToSave, newFile);
-
-		List<File> logFileList = oldLogFiles.get(runName);
-		if(logFileList == null) {
-			logFileList = new CopyOnWriteArrayList<File>();
-			oldLogFiles.put(runName, logFileList);
-		}
-		logFileList.add(newFile);
 	}
 
 	public void doLog(StaplerRequest request, StaplerResponse response,
