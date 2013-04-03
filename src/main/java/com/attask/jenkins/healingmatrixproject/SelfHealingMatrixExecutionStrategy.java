@@ -45,13 +45,17 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	private final Result worseThanOrEqualTo;
 	private final Result betterThanOrEqualTo;
 	private final int maxRetries;
+	private final int quietPeriodSeconds;
+	private final boolean stopRetryingAfterOneFails;
 
 	@DataBoundConstructor
-	public SelfHealingMatrixExecutionStrategy(String logPattern, Result worseThanOrEqualTo, Result betterThanOrEqualTo, int maxRetries) {
+	public SelfHealingMatrixExecutionStrategy(String logPattern, Result worseThanOrEqualTo, Result betterThanOrEqualTo, int maxRetries, int quietPeriodSeconds, boolean stopRetryingAfterOneFails) {
 		this.logPattern = logPattern == null ? "" : logPattern;
 		this.worseThanOrEqualTo = worseThanOrEqualTo == null ? Result.FAILURE : worseThanOrEqualTo;
 		this.betterThanOrEqualTo = betterThanOrEqualTo == null ? Result.ABORTED : betterThanOrEqualTo.isWorseOrEqualTo(this.worseThanOrEqualTo) ? betterThanOrEqualTo : this.worseThanOrEqualTo;
 		this.maxRetries = maxRetries < 0 ? 1 : maxRetries;
+		this.quietPeriodSeconds = quietPeriodSeconds;
+		this.stopRetryingAfterOneFails = stopRetryingAfterOneFails;
 	}
 
 	/**
@@ -90,6 +94,16 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	@Exported
 	public int getMaxRetries() {
 		return maxRetries;
+	}
+
+	@Exported
+	public int getQuietPeriodSeconds() {
+		return quietPeriodSeconds;
+	}
+
+	@Exported
+	public boolean getStopRetryingAfterOneFails() {
+		return stopRetryingAfterOneFails;
 	}
 
 	@Override
@@ -146,6 +160,7 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 		Map<String, String> whyBlockedMap = new HashMap<String, String>();//keep track of why builds are blocked so we can print unique messages when they change.
 		Result finalResult = Result.SUCCESS;
 		int iteration = 0;
+		boolean continueRetrying = true;
 		while (!configurations.isEmpty()) {
 			++iteration;
 			MatrixConfiguration configuration = configurations.removeFirst();
@@ -163,7 +178,7 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 			Run parentBuild = execution.getBuild();
 			MatrixRun matrixRun = configuration.getBuildByNumber(parentBuild.getNumber());
 			Result runResult = matrixRun.getResult();
-			if (runResult.isWorseOrEqualTo(getWorseThanOrEqualTo()) && runResult.isBetterOrEqualTo(getBetterThanOrEqualTo())) {
+			if (continueRetrying && runResult.isWorseOrEqualTo(getWorseThanOrEqualTo()) && runResult.isBetterOrEqualTo(getBetterThanOrEqualTo())) {
 				if (matchesPattern(matrixRun, patterns)) {
 					int retriedCount = retries.get(configuration);
 					if (retriedCount < getMaxRetries()) {
@@ -200,6 +215,10 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 					} else {
 						String logMessage = String.format("%s was %s. Matched pattern to rerun, but the max number of retries (%d) has been met.", matrixRun, runResult, getMaxRetries());
 						listener.error(logMessage);
+						if(getStopRetryingAfterOneFails()) {
+							listener.error("Not retrying any more builds.");
+							continueRetrying = false;
+						}
 					}
 				} else {
 					String logMessage = String.format("%s was %s. It did not match the pattern to rerun. Accepting result.", matrixRun, runResult);
@@ -347,7 +366,7 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 
 		// filter the parent actions for those that can be passed to the individual jobs.
 		List<MatrixChildAction> childActions = Util.filter(build.getActions(), MatrixChildAction.class);
-		configuration.scheduleBuild(childActions, upstreamCause);
+		configuration.scheduleBuild(getQuietPeriodSeconds(), upstreamCause, childActions.toArray(new Action[childActions.size()]));
 	}
 
 	@Extension

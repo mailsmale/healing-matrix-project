@@ -11,4 +11,10 @@
 	<f:entry title="Number of times to rerun" field="maxRetries">
 		<f:textbox default="1" />
 	</f:entry>
+	<f:entry title="Quiet Period (Seconds)" field="quietPeriodSeconds">
+		<f:textbox default="5" />
+	</f:entry>
+	<f:entry title="Stop retrying all after one exceeds max retry count" field="stopRetryingAfterOneFails">
+		<f:checkbox />
+	</f:entry>
 </j:jelly>
