@@ -45,16 +45,16 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	private final Result worseThanOrEqualTo;
 	private final Result betterThanOrEqualTo;
 	private final int maxRetries;
-	private final int quietPeriodSeconds;
 	private final boolean stopRetryingAfterOneFails;
 
+	@Deprecated @SuppressWarnings("UnusedDeclaration") private final transient int quietPeriodSeconds = 0; // Backwards compatibility
+
 	@DataBoundConstructor
-	public SelfHealingMatrixExecutionStrategy(String logPattern, Result worseThanOrEqualTo, Result betterThanOrEqualTo, int maxRetries, int quietPeriodSeconds, boolean stopRetryingAfterOneFails) {
+	public SelfHealingMatrixExecutionStrategy(String logPattern, Result worseThanOrEqualTo, Result betterThanOrEqualTo, int maxRetries, boolean stopRetryingAfterOneFails) {
 		this.logPattern = logPattern == null ? "" : logPattern;
 		this.worseThanOrEqualTo = worseThanOrEqualTo == null ? Result.FAILURE : worseThanOrEqualTo;
 		this.betterThanOrEqualTo = betterThanOrEqualTo == null ? Result.ABORTED : betterThanOrEqualTo.isWorseOrEqualTo(this.worseThanOrEqualTo) ? betterThanOrEqualTo : this.worseThanOrEqualTo;
 		this.maxRetries = maxRetries < 0 ? 1 : maxRetries;
-		this.quietPeriodSeconds = quietPeriodSeconds;
 		this.stopRetryingAfterOneFails = stopRetryingAfterOneFails;
 	}
 
@@ -94,11 +94,6 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	@Exported
 	public int getMaxRetries() {
 		return maxRetries;
-	}
-
-	@Exported
-	public int getQuietPeriodSeconds() {
-		return quietPeriodSeconds;
 	}
 
 	@Exported
