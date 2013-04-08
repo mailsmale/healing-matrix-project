@@ -128,7 +128,7 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	 * @return List of configurations scheduled.
 	 *         This is a subset of the configurations passed in the execution field, since plugins can reject specific axises from running.
 	 */
-	private LinkedList<MatrixConfiguration> scheduleMatrixRuns(MatrixBuild.MatrixBuildExecution execution, Map<MatrixConfiguration, Integer> retries) {
+	private LinkedList<MatrixConfiguration> scheduleMatrixRuns(MatrixBuild.MatrixBuildExecution execution, Map<MatrixConfiguration, Integer> retries) throws InterruptedException {
 		MatrixBuild build = (MatrixBuild) execution.getBuild();
 		LinkedList<MatrixConfiguration> configurations = new LinkedList<MatrixConfiguration>();
 		for (MatrixConfiguration configuration : execution.getActiveConfigurations()) {
@@ -360,13 +360,19 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 	 * @param configuration The configuration to schedule.
 	 * @param upstreamCause The cause of the build. Will either be an {@link hudson.model.Cause.UpstreamCause} or {@link com.attask.jenkins.healingmatrixproject.SelfHealingCause}.
 	 */
-	private void scheduleConfigurationBuild(MatrixBuild.MatrixBuildExecution execution, MatrixConfiguration configuration, Cause.UpstreamCause upstreamCause) {
+	private void scheduleConfigurationBuild(MatrixBuild.MatrixBuildExecution execution, MatrixConfiguration configuration, Cause.UpstreamCause upstreamCause) throws InterruptedException {
 		MatrixBuild build = (MatrixBuild) execution.getBuild();
 		execution.getListener().getLogger().println(Messages.MatrixBuild_Triggering(ModelHyperlinkNote.encodeTo(configuration)));
 
 		// filter the parent actions for those that can be passed to the individual jobs.
 		List<MatrixChildAction> childActions = Util.filter(build.getActions(), MatrixChildAction.class);
-		configuration.scheduleBuild(getQuietPeriodSeconds(), upstreamCause, childActions.toArray(new Action[childActions.size()]));
+
+		BuildListener listener = execution.getListener();
+		while(!configuration.scheduleBuild(childActions, upstreamCause)) {
+			String msg = "Unable to schedule build " + configuration.getFullDisplayName() + ". Retrying.";
+			listener.error(msg);
+			Thread.sleep(500);
+		}
 	}
 
 	@Extension
