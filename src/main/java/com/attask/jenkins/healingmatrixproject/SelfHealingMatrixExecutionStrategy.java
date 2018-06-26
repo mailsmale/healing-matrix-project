@@ -361,7 +361,7 @@ public class SelfHealingMatrixExecutionStrategy extends MatrixExecutionStrategy 
 
 		// filter the parent actions for those that can be passed to the individual jobs.
 		List<MatrixChildAction> childActions = Util.filter(build.getActions(), MatrixChildAction.class);
-
+		childActions.addAll(build.getActions(ParametersAction.class));
 		BuildListener listener = execution.getListener();
 		while(!configuration.scheduleBuild(childActions, upstreamCause)) {
 			String msg = "Unable to schedule build " + configuration.getFullDisplayName() + ". Retrying.";
